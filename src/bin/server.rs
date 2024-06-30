@@ -1,11 +1,13 @@
 use tonic::{transport::Server, Request, Response, Status};
 
 use hello_world::greeter_server::{Greeter, GreeterServer};
-use hello_world::{HelloReply, HelloRequest};
+use hello_world::{GreetEvent, GreetRequest};
 
 pub mod hello_world {
     tonic::include_proto!("helloworld");
 }
+
+const IP: &str = "[::1]:50051";
 
 #[derive(Debug, Default)]
 pub struct MyGreeter {}
@@ -14,12 +16,14 @@ pub struct MyGreeter {}
 impl Greeter for MyGreeter {
     async fn say_hello(
         &self,
-        request: Request<HelloRequest>,
-    ) -> Result<Response<HelloReply>, Status> {
+        request: Request<GreetRequest>,
+    ) -> Result<Response<GreetEvent>, Status> {
         println!("Got a request: {:?}", request);
 
-        let reply = HelloReply {
-            message: format!("Hello {}!", request.into_inner().name),
+        let name = request.into_inner().name;
+        let reply = GreetEvent {
+            target_name: name.clone(),
+            reply: format!("Hello, {}", name),
         };
 
         Ok(Response::new(reply))
@@ -28,7 +32,7 @@ impl Greeter for MyGreeter {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse()?;
+    let addr = IP.parse()?;
     let greeter = MyGreeter::default();
 
     Server::builder()
